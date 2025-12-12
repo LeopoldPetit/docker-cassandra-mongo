@@ -45,7 +45,11 @@ def insert_cassandra():
     session.execute(CREATE_TABLE_CQL)
     print("Schéma Cassandra créé : table 'logs_by_user'.")
 
-    with open("/app/scripts/ecommerce_logs.json", "r") as f:
+    # Vider la table avant d'insérer (évite les doublons)
+    session.execute(f"TRUNCATE {KEYSPACE}.logs_by_user")
+    print("Table vidée.")
+
+    with open("/app/scripts/data/ecommerce_logs.json", "r") as f:
         data = json.load(f)
 
     print(f"Début de l'insertion de {len(data)} lignes (batchs)...")

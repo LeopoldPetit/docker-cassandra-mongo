@@ -1,209 +1,239 @@
 # TP NoSQL - Comparaison Cassandra, MongoDB, Elasticsearch
 
-Ce projet compare les performances de 3 SGBD NoSQL pour différents cas d'usage avec des logs e-commerce.
+Ce projet compare les performances de 3 SGBD NoSQL pour différents cas d'usage avec des logs e-commerce. Il inclut un **dashboard React** interactif pour visualiser les résultats en temps réel.
+
+![Dashboard Preview](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?logo=react)
+![API](https://img.shields.io/badge/API-Flask%20Python-green?logo=flask)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)
+
+## 🎯 Fonctionnalités
+
+- **Dashboard React** : Interface moderne pour exécuter les tâches et voir les résultats
+- **3 Tâches de Benchmark** :
+  - 🔍 **Task 1** : Recherche Full-Text (mot "error" dans les logs)
+  - 👤 **Task 2** : Accès Ciblé (100 derniers logs d'un utilisateur)
+  - 📊 **Task 3** : Agrégation (moyenne session_duration par action)
+- **Gestion des données** : Générer/supprimer des logs depuis l'interface
+- **Health Check** : Statut en temps réel des 3 bases de données
+- **Visualisation** : Graphiques comparatifs avec Recharts
 
 ## 📁 Structure du projet
 
 ```
 test-cassandra/
-├── docker-compose.yml          # Stack Docker (5 services)
-├── Dockerfile                  # Image Python
+├── docker-compose.yml          # Stack Docker (8 services)
+├── Dockerfile                  # Image Python pour l'API
+├── Makefile                    # Automatisation des commandes
 ├── requirements.txt            # Dépendances Python
 ├── README.md
+├── frontend/                   # Dashboard React
+│   ├── Dockerfile              # Image Nginx pour prod
+│   ├── nginx.conf              # Configuration proxy
+│   ├── package.json
+│   └── src/
+│       ├── App.tsx             # Composant principal
+│       └── components/
+│           ├── DataManager.tsx # Gestion des données
+│           ├── HealthCheck.tsx # Statut des DBs
+│           └── TaskRunner.tsx  # Exécution des tâches
 └── scripts/
+    ├── api/
+    │   └── main_api.py         # API REST Flask (port 5050)
     ├── data/
-    │   ├── generate_data.py    # Génère 50k logs e-commerce
+    │   ├── generate_data.py    # Générateur de logs
     │   └── ecommerce_logs.json # Données générées
     ├── insert/
-    │   ├── cassandra-insert.py # Insertion Cassandra
-    │   ├── mongo_insert.py     # Insertion MongoDB
-    │   └── elasticsearch_insert.py # Insertion Elasticsearch
+    │   ├── cassandra-insert.py
+    │   ├── mongo_insert.py
+    │   └── elasticsearch_insert.py
     └── task/
-        ├── task1_simple.py     # Full-text search
-        ├── task2_simple.py     # Accès ciblé
-        └── task3_simple.py     # Agrégation
+        ├── task1_simple.py     # Benchmark Full-Text
+        ├── task2_simple.py     # Benchmark Accès Ciblé
+        └── task3_simple.py     # Benchmark Agrégation
 ```
 
 ## 🚀 Démarrage Rapide
 
-### 1. Démarrer tous les services
+### Option 1 : Une seule commande (recommandé)
 
 ```bash
-docker-compose up -d
+make init
 ```
 
-### 2. Vérifier que tous les services sont prêts
+Cette commande fait tout automatiquement :
+1. ✅ Crée l'environnement Python
+2. ✅ Installe les dépendances
+3. ✅ Build et démarre Docker
+4. ✅ Attend que les bases soient prêtes
+5. ✅ Génère et insère les données
+
+### Option 2 : Étape par étape
 
 ```bash
-docker-compose ps
+# 1. Démarrer les services Docker
+docker-compose up -d --build
+
+# 2. Attendre que les bases soient prêtes (~60s)
+make wait-healthy
+
+# 3. Générer et insérer les données
+make data-generate
+make data-insert
 ```
 
-### 3. Attendre que Cassandra soit prêt (~30s)
+## 🌐 URLs Disponibles
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **🎨 Dashboard React** | http://localhost:3000 | Interface principale |
+| **🔌 API REST** | http://localhost:5050/api/health | Backend Flask |
+| **📊 Kibana** | http://localhost:5601 | Interface Elasticsearch |
+| **🍃 Mongo Express** | http://localhost:8081 | Interface MongoDB |
+
+## 📋 Commandes Makefile
 
 ```bash
-docker-compose logs -f cassandra
-# Attendre "Created default superuser role 'cassandra'"
+make help          # Afficher toutes les commandes disponibles
+
+# Setup
+make init          # 🚀 Initialisation complète (une seule commande!)
+make reinit        # Réinitialiser tout (supprime les données)
+make setup         # Créer venv + installer dépendances
+
+# Docker
+make docker-up     # Démarrer les services
+make docker-down   # Arrêter les services
+make docker-build  # Rebuild les images
+make docker-logs   # Voir les logs
+make docker-clean  # Supprimer les volumes (⚠️ perte de données)
+
+# Tâches
+make task1         # Exécuter Task 1 (Full-Text)
+make task2         # Exécuter Task 2 (Accès Ciblé)
+make task3         # Exécuter Task 3 (Agrégation)
+make all-tasks     # Exécuter toutes les tâches
+
+# Données
+make data-generate # Générer les logs
+make data-insert   # Insérer dans les 3 DBs
+
+# Utilitaires
+make test-api      # Tester l'API
+make shell         # Shell dans le container Python
+make shell-cassandra  # Ouvrir cqlsh
+make shell-mongo      # Ouvrir mongosh
 ```
 
----
+## 🔌 Endpoints API
 
-## 📊 Commandes du TP
+L'API REST est disponible sur le port **5050** :
 
-### Générer les données (50 000 logs)
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/api/health` | GET | Statut de l'API et des DBs |
+| `/api/task/1` | GET | Exécuter Task 1 |
+| `/api/task/2` | GET | Exécuter Task 2 |
+| `/api/task/3` | GET | Exécuter Task 3 |
+| `/api/data/stats` | GET | Statistiques des données |
+| `/api/data/generate` | POST | Générer N logs |
+| `/api/data/clear` | DELETE | Vider toutes les DBs |
+
+### Exemples curl
 
 ```bash
-docker-compose run --rm python-app python scripts/data/generate_data.py
+# Vérifier la santé de l'API
+curl http://localhost:5050/api/health | jq
+
+# Exécuter Task 1
+curl http://localhost:5050/api/task/1 | jq
+
+# Générer 1000 logs
+curl -X POST "http://localhost:5050/api/data/generate?count=1000"
+
+# Voir les stats
+curl http://localhost:5050/api/data/stats | jq
 ```
-
-### Insérer les données dans les 3 SGBD
-
-```bash
-# Cassandra
-docker-compose run --rm python-app python scripts/insert/cassandra-insert.py
-
-# MongoDB
-docker-compose run --rm python-app python scripts/insert/mongo_insert.py
-
-# Elasticsearch
-docker-compose run --rm python-app python scripts/insert/elasticsearch_insert.py
-```
-
-### Exécuter les 3 tâches de benchmark
-
-```bash
-# Tâche 1 : Recherche Full-Text
-docker-compose run --rm python-app python scripts/task/task1_simple.py
-
-# Tâche 2 : Accès Ciblé (user_id=10, 100 derniers logs)
-docker-compose run --rm python-app python scripts/task/task2_simple.py
-
-# Tâche 3 : Agrégation (moyenne session_duration_ms)
-docker-compose run --rm python-app python scripts/task/task3_simple.py
-```
-
----
-
-## 🔧 Commandes Utiles Docker
-
-### Gestion des services
-
-```bash
-# Démarrer tous les services
-docker-compose up -d
-
-# Arrêter tous les services
-docker-compose down
-
-# Arrêter et supprimer les volumes (RESET complet des données)
-docker-compose down -v
-
-# Redémarrer un service spécifique
-docker-compose restart cassandra
-docker-compose restart mongo
-docker-compose restart elasticsearch
-
-# Voir les logs en temps réel
-docker-compose logs -f
-docker-compose logs -f cassandra
-docker-compose logs -f mongo
-docker-compose logs -f elasticsearch
-```
-
-### Reconstruire l'image Python
-
-```bash
-docker-compose build python-app
-```
-
----
 
 ## 🖥️ Accès aux Consoles
 
 ### Cassandra (cqlsh)
 
 ```bash
-docker-compose exec cassandra cqlsh
+make shell-cassandra
+# ou
+docker exec -it cassandra-db cqlsh
 ```
 
-Commandes CQL utiles :
 ```sql
--- Lister les keyspaces
 DESCRIBE KEYSPACES;
-
--- Utiliser le keyspace du TP
 USE nosql_tp;
-
--- Voir les tables
-DESCRIBE TABLES;
-
--- Voir le schéma d'une table
-DESCRIBE TABLE logs_by_user;
-
--- Compter les documents
 SELECT COUNT(*) FROM logs_by_user;
-
--- Requête exemple
 SELECT * FROM logs_by_user WHERE user_id = 10 LIMIT 10;
 ```
 
 ### MongoDB (mongosh)
 
 ```bash
-docker-compose exec mongo mongosh
+make shell-mongo
+# ou
+docker exec -it mongo-db mongosh
 ```
 
-Commandes MongoDB utiles :
 ```javascript
-// Utiliser la base du TP
 use nosql_tp
-
-// Compter les documents
 db.logs_ecommerce.countDocuments()
-
-// Voir les index
-db.logs_ecommerce.getIndexes()
-
-// Requête exemple
-db.logs_ecommerce.find({user_id: 10}).sort({timestamp: -1}).limit(10)
-
-// Explain d'une requête
-db.logs_ecommerce.find({user_id: 10}).explain("executionStats")
+db.logs_ecommerce.find({user_id: 10}).limit(10)
 ```
 
-### Elasticsearch (curl)
+### Elasticsearch
 
 ```bash
-# Depuis le host
-curl -X GET "localhost:9200/_cat/indices?v"
-curl -X GET "localhost:9200/ecommerce_logs/_count"
-curl -X GET "localhost:9200/ecommerce_logs/_search?size=1" | jq
+curl http://localhost:9200/ecommerce_logs/_count | jq
+curl "http://localhost:9200/ecommerce_logs/_search?size=1" | jq
 ```
 
----
-
-## 🌐 Interfaces Web
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| **Kibana** | http://localhost:5601 | Interface Elasticsearch |
-| **Mongo Express** | http://localhost:8081 | Interface MongoDB |
-
----
-
-## 📋 Variables d'Environnement
-
-| Variable | Description | Valeur par défaut |
-|----------|-------------|-------------------|
-| `CASSANDRA_HOST` | Hôte Cassandra | cassandra |
-| `MONGO_HOST` | Hôte MongoDB | mongo |
-| `ES_HOST` | Hôte Elasticsearch | elasticsearch |
-
----
-
-## 🎯 Résultats Attendus
+## � Résultats Attendus
 
 | Tâche | Meilleur SGBD | Pourquoi |
 |-------|---------------|----------|
-| **Full-Text** | Elasticsearch | Index inversé optimisé |
-| **Accès Ciblé** | Cassandra | Clé de partition + clustering |
-| **Agrégation** | Elasticsearch | Agrégations natives optimisées |
+| **Full-Text** | 🏆 Elasticsearch | Index inversé optimisé pour la recherche textuelle |
+| **Accès Ciblé** | 🏆 Cassandra | Clé de partition + clustering order = accès O(1) |
+| **Agrégation** | 🏆 Elasticsearch | Agrégations natives hautement optimisées |
+
+## �️ Technologies
+
+- **Frontend** : React 18, TypeScript, Vite, Recharts, Lucide-React
+- **Backend** : Python 3.11, Flask, Flask-CORS
+- **Bases de données** :
+  - Apache Cassandra 4.1
+  - MongoDB 7.0
+  - Elasticsearch 8.13.0
+- **Infrastructure** : Docker, Docker Compose, Nginx
+
+## 📋 Prérequis
+
+- Docker & Docker Compose
+- Make (préinstallé sur macOS avec Xcode Command Line Tools)
+- Node.js 18+ (pour le développement frontend uniquement)
+
+## 🐛 Dépannage
+
+### Port 5000 occupé (macOS)
+
+Le port 5000 est utilisé par AirPlay sur macOS. L'API utilise le port **5050** pour éviter ce conflit.
+
+### Cassandra ne démarre pas
+
+```bash
+# Vérifier les logs
+docker-compose logs cassandra
+
+# Attendre que Cassandra soit prêt
+make wait-healthy
+```
+
+### Réinitialiser complètement
+
+```bash
+make reinit
+```

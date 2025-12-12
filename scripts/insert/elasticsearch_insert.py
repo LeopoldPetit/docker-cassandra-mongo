@@ -25,7 +25,7 @@ def insert_elasticsearch():
         print(f"Attention: {e}")
 
     # 2. Chargement des données
-    with open("/app/scripts/ecommerce_logs.json", "r") as f:
+    with open("/app/scripts/data/ecommerce_logs.json", "r") as f:
         data = json.load(f)
         
     print(f"Début de l'indexation de {len(data)} documents...")

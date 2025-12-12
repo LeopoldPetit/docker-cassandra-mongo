@@ -21,7 +21,7 @@ def insert_mongo():
     collection.drop()
 
     print(f"Chargement de 'ecommerce_logs.json'...")
-    with open("/app/scripts/ecommerce_logs.json", "r") as f:
+    with open("/app/scripts/data/ecommerce_logs.json", "r") as f:
         data = json.load(f)
 
     print(f"Début de l'insertion de {len(data)} documents...")
